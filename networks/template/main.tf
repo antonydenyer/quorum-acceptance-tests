@@ -14,7 +14,7 @@ provider "docker" {
 locals {
   number_of_nodes = var.number_of_nodes
   node_indices    = range(var.number_of_nodes)
-  more_args = join(" ", [
+  more_args       = join(" ", [
     "--allow-insecure-unlock" # since 1.9.7 upgrade
   ])
   pulled_docker_images = concat(var.docker_images, var.quorum_docker_image.local ? [] : list(var.quorum_docker_image.name), var.tessera_docker_image.local ? [] : list(var.tessera_docker_image.name))
@@ -25,7 +25,7 @@ module "helper" {
 
   consensus       = var.consensus
   number_of_nodes = var.number_of_nodes
-  geth = {
+  geth            = {
     container = {
       image   = var.quorum_docker_image
       port    = { raft = 50400, p2p = 21000, http = 8545, ws = -1 }
@@ -58,6 +58,7 @@ module "network" {
   output_dir            = var.output_dir
   exclude_initial_nodes = var.exclude_initial_nodes
   qbftBlock             = var.qbftBlock
+  qbftContractBlock     = var.qbftContractBlock
 
   override_tm_named_key_allocation  = var.override_tm_named_key_allocation
   override_named_account_allocation = var.override_named_account_allocation
@@ -83,11 +84,11 @@ module "docker" {
   password_file_name               = module.network.password_file_name
   geth_datadirs                    = var.remote_docker_config == null ? module.network.data_dirs : split(",", join("", null_resource.scp[*].triggers.data_dirs))
   tessera_datadirs                 = var.remote_docker_config == null ? module.network.tm_dirs : split(",", join("", null_resource.scp[*].triggers.tm_dirs))
-  privacy_marker_transactions = var.privacy_marker_transactions
+  privacy_marker_transactions      = var.privacy_marker_transactions
   exclude_initial_nodes            = module.network.exclude_initial_nodes
   start_quorum                     = false
   start_tessera                    = false
-  additional_geth_args             = { for idx in local.node_indices : idx => var.addtional_geth_args }
+  additional_geth_args             = {for idx in local.node_indices : idx => var.addtional_geth_args}
   additional_geth_container_vol    = var.additional_quorum_container_vol
   additional_tessera_container_vol = var.additional_tessera_container_vol
   tessera_app_container_path       = var.tessera_app_container_path

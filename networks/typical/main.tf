@@ -14,7 +14,7 @@ provider "docker" {
 locals {
   number_of_nodes = var.number_of_nodes
   node_indices    = range(local.number_of_nodes)
-  more_args = join(" ", [
+  more_args       = join(" ", [
     # since 1.9.7 upgrade, --allow-insecure-unlock is needed§
     "--allow-insecure-unlock",
     "--revertreason"
@@ -26,10 +26,10 @@ module "helper" {
 
   consensus       = var.consensus
   number_of_nodes = local.number_of_nodes
-  geth = {
+  geth            = {
     container = {
       image = var.quorum_docker_image
-      port = {
+      port  = {
         raft = 50400,
         p2p  = 21000,
         http = 8545,
@@ -47,7 +47,7 @@ module "helper" {
   tessera = {
     container = {
       image = var.tessera_docker_image
-      port = {
+      port  = {
         thirdparty = 9080,
         p2p        = 9000,
         q2t        = 9081,
@@ -68,12 +68,13 @@ module "network" {
 
   consensus            = module.helper.consensus
   privacy_enhancements = var.privacy_enhancements
-  privacy_precompile = var.privacy_precompile
+  privacy_precompile   = var.privacy_precompile
   network_name         = var.network_name
   geth_networking      = module.helper.geth_networking
   tm_networking        = module.helper.tm_networking
   output_dir           = var.output_dir
   qbftBlock            = var.qbftBlock
+  qbftContractBlock    = var.qbftContractBlock
 
   override_tm_named_key_allocation  = var.override_tm_named_key_allocation
   override_named_account_allocation = var.override_named_account_allocation
@@ -93,15 +94,15 @@ module "docker" {
   ethstats_ip     = module.helper.ethstat_ip
   ethstats_secret = module.helper.ethstats_secret
 
-  network_name       = module.network.network_name
-  network_id         = module.network.network_id
-  node_keys_hex      = module.network.node_keys_hex
-  password_file_name = module.network.password_file_name
-  geth_datadirs      = var.remote_docker_config == null ? module.network.data_dirs : split(",", join("", null_resource.scp[*].triggers.data_dirs))
-  tessera_datadirs   = var.remote_docker_config == null ? module.network.tm_dirs : split(",", join("", null_resource.scp[*].triggers.tm_dirs))
+  network_name                = module.network.network_name
+  network_id                  = module.network.network_id
+  node_keys_hex               = module.network.node_keys_hex
+  password_file_name          = module.network.password_file_name
+  geth_datadirs               = var.remote_docker_config == null ? module.network.data_dirs : split(",", join("", null_resource.scp[*].triggers.data_dirs))
+  tessera_datadirs            = var.remote_docker_config == null ? module.network.tm_dirs : split(",", join("", null_resource.scp[*].triggers.tm_dirs))
   privacy_marker_transactions = var.privacy_marker_transactions
 
-  additional_geth_args             = { for idx in local.node_indices : idx => local.more_args }
+  additional_geth_args             = {for idx in local.node_indices : idx => local.more_args}
   additional_geth_container_vol    = var.additional_quorum_container_vol
   additional_tessera_container_vol = var.additional_tessera_container_vol
   tessera_app_container_path       = var.tessera_app_container_path

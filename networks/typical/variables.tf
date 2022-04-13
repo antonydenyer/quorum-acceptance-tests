@@ -177,3 +177,9 @@ variable "qbftBlock" {
   default     = { block = 0, enabled = false }
   description = "qbft fork block (enabled/disabled) and the block height at which it is enabled"
 }
+
+variable "qbftContractBlock" {
+  type        = object({ block = number, enabled = bool })
+  default     = { block = 0, enabled = false }
+  description = "qbft smart contract fork block (enabled/disabled) and the block height at which it is enabled"
+}

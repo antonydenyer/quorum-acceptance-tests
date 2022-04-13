@@ -27,27 +27,30 @@ locals {
   quorum_node_indices     = range(local.number_of_quorum_nodes)
   besu_node_indices       = range(local.number_of_besu_nodes)
   tessera_node_indices    = range(local.number_of_tessera_nodes)
-  more_args = join(" ", [
+  more_args               = join(" ", [
     "--allow-insecure-unlock" # since 1.9.7 upgrade
   ])
   istanbul_validators = merge(
-    { for id in local.tessera_node_indices : id => "true" }, // default to true for all
-    { for id in var.exclude_initial_nodes : id => "false" }
+    {for id in local.tessera_node_indices : id => "true"}, // default to true for all
+    {for id in var.exclude_initial_nodes : id => "false"}
   )
-  besu_node_initial_paticipants = { for id in local.besu_node_indices : id => "true" }
-  quorum_initial_paticipants    = { for id in local.quorum_node_indices : id => "true" }
+  besu_node_initial_paticipants = {for id in local.besu_node_indices : id => "true"}
+  quorum_initial_paticipants    = {for id in local.quorum_node_indices : id => "true"}
 
   ethsigner_dirs = [for idx in local.besu_node_indices : format("%s/%s%s", quorum_bootstrap_network.this.network_dir_abs, local.ethsigner_dir_prefix, idx)]
 
   // by default we allocate one named account per node
   // this can be overrriden by the variable
-  named_accounts_alloc = { for id in local.tessera_node_indices : id => [
-  "Default"] }
+  named_accounts_alloc = {
+  for id in local.tessera_node_indices : id => [
+    "Default"
+  ]
+  }
 
   // by default we allocate one named key per TM: K0, K1 ... Kn
   // this can be overrriden by the variable
   tm_named_keys_alloc = merge(
-    { for id in local.tessera_node_indices : id => [format("UnnamedKey%d", id)] },
+    {for id in local.tessera_node_indices : id => [format("UnnamedKey%d", id)]},
     var.override_tm_named_key_allocation
   )
 
@@ -56,60 +59,71 @@ locals {
 
   keystore_files = [for idx in local.besu_node_indices : format("%s/%s", local.keystore_folder, regex("UTC.+$", quorum_bootstrap_keystore.besu-accountkeys-generator[idx].account[0].account_url))]
 
-  geth_networking = [for idx in local.quorum_node_indices :
-    {
-      image = var.geth.container.image
-      port = {
-        http = { internal = var.geth.container.port.http, external = var.geth.host.port.http_start + idx }
-        ws   = var.geth.container.port.ws == -1 ? null : { internal = var.geth.container.port.ws, external = var.geth.host.port.ws_start + idx }
-        p2p  = var.geth.container.port.p2p
-        raft = var.geth.container.port.raft
+  geth_networking = [
+  for idx in local.quorum_node_indices :
+  {
+    image = var.geth.container.image
+    port  = {
+      http = { internal = var.geth.container.port.http, external = var.geth.host.port.http_start + idx }
+      ws   = var.geth.container.port.ws == -1 ? null : {
+        internal = var.geth.container.port.ws, external = var.geth.host.port.ws_start + idx
       }
-      graphql = var.geth.container.graphql
-      ip = {
-        private = cidrhost(module.helper.network_cidr, idx + 1 + 2)
-        public  = "localhost"
-      }
+      p2p  = var.geth.container.port.p2p
+      raft = var.geth.container.port.raft
     }
+    graphql = var.geth.container.graphql
+    ip      = {
+      private = cidrhost(module.helper.network_cidr, idx + 1 + 2)
+      public  = "localhost"
+    }
+  }
   ]
-  tm_networking = [for idx in local.tessera_node_indices :
-    {
-      image = var.tessera.container.image
-      port = {
-        thirdparty = { internal = var.tessera.container.port.thirdparty, external = var.tessera.host.port.thirdparty_start + idx }
-        q2t        = { internal = var.tessera.container.port.q2t, external = var.tessera.host.port.q2t_start + idx }
-        p2p        = var.tessera.container.port.p2p
+  tm_networking = [
+  for idx in local.tessera_node_indices :
+  {
+    image = var.tessera.container.image
+    port  = {
+      thirdparty = {
+        internal = var.tessera.container.port.thirdparty, external = var.tessera.host.port.thirdparty_start + idx
       }
-      ip = {
-        private = cidrhost(module.helper.network_cidr, idx + 1 + 100)
-        public  = "localhost"
-      }
+      q2t        = { internal = var.tessera.container.port.q2t, external = var.tessera.host.port.q2t_start + idx }
+      p2p        = var.tessera.container.port.p2p
     }
+    ip = {
+      private = cidrhost(module.helper.network_cidr, idx + 1 + 100)
+      public  = "localhost"
+    }
+  }
   ]
-  besu_networking = [for idx in local.besu_node_indices :
-    {
-      image = var.besu.container.image
-      port = {
-        http    = { internal = var.besu.container.port.http, external = var.besu.host.port.http_start + local.number_of_quorum_nodes + idx }
-        ws      = { internal = var.besu.container.port.ws, external = var.besu.host.port.ws_start + idx }
-        graphql = { internal = var.besu.container.port.graphql, external = var.besu.host.port.graphql_start + idx }
-        p2p     = var.besu.container.port.p2p
+  besu_networking = [
+  for idx in local.besu_node_indices :
+  {
+    image = var.besu.container.image
+    port  = {
+      http    = {
+        internal = var.besu.container.port.http,
+        external = var.besu.host.port.http_start + local.number_of_quorum_nodes + idx
       }
-      ip = {
-        private = cidrhost(module.helper.network_cidr, idx + 1 + 2 + var.number_of_quorum_nodes)
-        public  = "localhost"
-      }
+      ws      = { internal = var.besu.container.port.ws, external = var.besu.host.port.ws_start + idx }
+      graphql = { internal = var.besu.container.port.graphql, external = var.besu.host.port.graphql_start + idx }
+      p2p     = var.besu.container.port.p2p
     }
+    ip = {
+      private = cidrhost(module.helper.network_cidr, idx + 1 + 2 + var.number_of_quorum_nodes)
+      public  = "localhost"
+    }
+  }
   ]
-  ethsigner_networking = [for idx in local.besu_node_indices :
-    {
-      image = var.ethsigner.container.image
-      port  = { internal = var.ethsigner.container.port, external = var.ethsigner.host.port_start + idx }
-      ip = {
-        private = cidrhost(module.helper.network_cidr, idx + 1 + 10)
-        public  = "localhost"
-      }
+  ethsigner_networking = [
+  for idx in local.besu_node_indices :
+  {
+    image = var.ethsigner.container.image
+    port  = { internal = var.ethsigner.container.port, external = var.ethsigner.host.port_start + idx }
+    ip    = {
+      private = cidrhost(module.helper.network_cidr, idx + 1 + 10)
+      public  = "localhost"
     }
+  }
   ]
 }
 
@@ -120,7 +134,7 @@ module "helper" {
   number_of_besu_nodes   = local.number_of_besu_nodes
   number_of_quorum_nodes = local.number_of_quorum_nodes
   hybrid-network         = local.hybrid_network
-  geth = {
+  geth                   = {
     container = {
       image   = var.geth.container.image
       port    = { raft = 50400, p2p = 21000, http = 8545, ws = -1 }
@@ -170,6 +184,7 @@ module "network" {
   tm_networking                 = local.tm_networking
   output_dir                    = var.output_dir
   qbftBlock                     = var.qbftBlock
+  qbftContractBlock             = var.qbftContractBlock
   hybrid_extradata              = quorum_bootstrap_istanbul_extradata.hybrid.extradata
   hybrid_network                = local.hybrid_network
   hybrid_enodeurls              = local.enode_urls
@@ -224,7 +239,7 @@ module "docker" {
   tessera_datadirs            = var.remote_docker_config == null ? module.network.tm_dirs : split(",", join("", null_resource.scp[*].triggers.quorum_tm_dirs))
   privacy_marker_transactions = var.privacy_marker_transactions
 
-  additional_geth_args             = { for idx in local.quorum_node_indices : idx => local.more_args }
+  additional_geth_args             = {for idx in local.quorum_node_indices : idx => local.more_args}
   additional_geth_container_vol    = var.additional_quorum_container_vol
   additional_tessera_container_vol = var.additional_tessera_container_vol
   tessera_app_container_path       = var.tessera_app_container_path

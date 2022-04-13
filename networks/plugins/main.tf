@@ -15,20 +15,25 @@ locals {
   standard_apis = "admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,quorumExtension,${var.consensus}"
   plugin_apis   = [for k, v in var.plugins : "plugin@${k}" if v.expose_api]
   apis          = "${local.standard_apis},${join(",", local.plugin_apis)}"
-  more_args = join(" ", [
+  more_args     = join(" ", [
     "--allow-insecure-unlock", # since 1.9.7 upgrade
     var.enable_multitenancy ? "--multitenancy" : ""
   ])
 
   node_indices = range(var.number_of_nodes)
 
-  providers = { for k, v in var.plugins : k => { name = v.name, version = v.version, config = format("file://%s/plugins/%s-config.json", module.docker.container_geth_datadir, k) } }
+  providers = {
+  for k, v in var.plugins : k => {
+    name   = v.name, version = v.version,
+    config = format("file://%s/plugins/%s-config.json", module.docker.container_geth_datadir, k)
+  }
+  }
 
   with_hashicorp_plugin = contains(values(var.plugins)[*].name, "quorum-account-plugin-hashicorp-vault")
 
   additional_geth_args = merge(
-    { for idx in local.node_indices : idx => format("--http.api %s --plugins file://%s/plugin-settings.json %s", local.apis, "/data/qdata", local.more_args) },
-  var.override_additional_geth_args)
+    {for idx in local.node_indices : idx => format("--http.api %s --plugins file://%s/plugin-settings.json %s", local.apis, "/data/qdata", local.more_args)},
+    var.override_additional_geth_args)
 }
 
 module "helper" {
@@ -36,7 +41,7 @@ module "helper" {
 
   consensus       = var.consensus
   number_of_nodes = var.number_of_nodes
-  geth = {
+  geth            = {
     container = {
       image   = var.quorum_docker_image
       port    = { raft = 50400, p2p = 21000, http = 8545, ws = -1 }
@@ -62,12 +67,13 @@ module "network" {
 
   consensus            = module.helper.consensus
   privacy_enhancements = var.privacy_enhancements
-  privacy_precompile = var.privacy_precompile
+  privacy_precompile   = var.privacy_precompile
   network_name         = var.network_name
   geth_networking      = module.helper.geth_networking
   tm_networking        = module.helper.tm_networking
   output_dir           = var.output_dir
   qbftBlock            = var.qbftBlock
+  qbftContractBlock    = var.qbftContractBlock
 
   override_tm_named_key_allocation  = var.override_tm_named_key_allocation
   override_named_account_allocation = var.override_named_account_allocation
@@ -85,17 +91,17 @@ module "docker" {
   ethstats_ip     = module.helper.ethstat_ip
   ethstats_secret = module.helper.ethstats_secret
 
-  network_name       = module.network.network_name
-  network_id         = module.network.network_id
-  node_keys_hex      = module.network.node_keys_hex
-  password_file_name = module.network.password_file_name
-  geth_datadirs      = var.remote_docker_config == null ? module.network.data_dirs : split(",", join("", null_resource.scp[*].triggers.data_dirs))
-  tessera_datadirs   = var.remote_docker_config == null ? module.network.tm_dirs : split(",", join("", null_resource.scp[*].triggers.tm_dirs))
+  network_name                = module.network.network_name
+  network_id                  = module.network.network_id
+  node_keys_hex               = module.network.node_keys_hex
+  password_file_name          = module.network.password_file_name
+  geth_datadirs               = var.remote_docker_config == null ? module.network.data_dirs : split(",", join("", null_resource.scp[*].triggers.data_dirs))
+  tessera_datadirs            = var.remote_docker_config == null ? module.network.tm_dirs : split(",", join("", null_resource.scp[*].triggers.tm_dirs))
   privacy_marker_transactions = var.privacy_marker_transactions
 
   # provide additional geth args
   additional_geth_args = local.additional_geth_args
-  additional_geth_env = {
+  additional_geth_env  = {
     (local.plugin_token_envvar_name) = local.vault_server_token
   }
 
