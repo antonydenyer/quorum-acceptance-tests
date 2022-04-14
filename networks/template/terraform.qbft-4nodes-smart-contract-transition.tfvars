@@ -3,6 +3,6 @@
 #
 
 number_of_nodes     = 4
-consensus           = "istanbul"
+consensus           = "qbft"
 addtional_geth_args = "--allow-insecure-unlock"
 qbftContractBlock   = { block = 100, enabled = true }
