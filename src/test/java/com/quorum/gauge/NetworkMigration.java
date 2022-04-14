@@ -193,6 +193,21 @@ public class NetworkMigration extends AbstractSpecImplementation {
         assertThat(waitForLog).allMatch(found -> found);
     }
 
+
+    @Step("Verify nodes <nodes> are using are using smart contract validators")
+    public void checkAllNodesAreUsingSmartContractValidators(List<QuorumNetworkProperty.Node> nodes) {
+        NetworkResources networkResources = mustHaveValue(DataStoreFactory.getScenarioDataStore(), "networkResources", NetworkResources.class);
+
+        final String grepString = "Fetched validators from smart contract";
+        var waitForLog = Observable.fromIterable(nodes)
+            .flatMap(n -> {
+                var resourceId = networkResources.getResourceId(n.getName()).stream().filter(i -> infraService.isGeth(i).blockingFirst()).findFirst().get();
+                return infraService.grepLog(resourceId, grepString, 30, TimeUnit.SECONDS);
+            }).blockingIterable();
+
+        assertThat(waitForLog).allMatch(found -> found);
+    }
+
     @NotNull
     private String getGrepString(final String consensusAlgorithm) {
         if(consensusAlgorithm.compareToIgnoreCase("ibft") == 0) {
